@@ -1,3 +1,5 @@
+package advpro5
+
 import scala.annotation.tailrec
 import scala.List
 import scala.collection.immutable.Stream.cons
@@ -180,11 +182,7 @@ object RNG {
 
 }
 
-import State._
-
 case class State[S, +A](run: S => (A, S)) {
-
-//  "State.type doesn't take parameters error" (?)
 
   // Exercise 10 (6.10)
 
@@ -246,13 +244,12 @@ object State {
   def state2stream[S,A] (s :State[S,A]) (seed :S) :Stream[A] = {
     val (aa,ss) = s.run(seed)
     cons(aa, state2stream( unit[S,A](aa) )(ss))
+    //gives a stream of all equal values, because unit doesn't update the seed, given an s it returns the same s
   }
 
-  val test11 = state2stream( random_int )( RNG.Simple(42))
-
   // Exercise 12
-
-  val random_integers = state2stream( random_int )(RNG.Simple(42)).take(10).toList
+  // see the actual one in the Tests.scala file
+  // val random_integers = State.state2stream( State.random_int )(RNG.Simple(42)).take(10).toList
 
 }
 
@@ -270,5 +267,3 @@ object Candy {
 //
 //  }
 }
-
-// vim:cc=80:foldmethod=indent:foldenable
