@@ -1,7 +1,6 @@
 package advpro5
 
 import scala.annotation.tailrec
-import scala.List
 import scala.collection.immutable.Stream.cons
 
 trait RNG {
@@ -243,8 +242,8 @@ object State {
 
   def state2stream[S,A] (s :State[S,A]) (seed :S) :Stream[A] = {
     val (aa,ss) = s.run(seed)
-    cons(aa, state2stream( unit[S,A](aa) )(ss))
-    //gives a stream of all equal values, because unit doesn't update the seed, given an s it returns the same s
+    cons(aa, state2stream( s )(ss))
+    //using the same state but running it with different seeds produces different values
   }
 
   // Exercise 12
@@ -263,7 +262,63 @@ object Candy {
 
   // Exercise 13 (CB 6.11)
 
-//  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = {
-//
-//  }
+  def update(i : Input)(s: Machine) : Machine =
+    (i,s) match {
+      case (_, Machine(_, 0, _)) => s // out of candies -> ignore input
+      case (Coin, Machine(false, _, _)) => s // ignore input -> coin in unlocked machine
+      case (Coin, Machine(true, candy, coin)) => Machine(false, candy, coin + 1) //unlock machine, update coins
+      case (Turn, Machine(true, _, _)) => s // ignore input -> trying to turn unlocked machine
+      case (Turn, Machine(false, candy, coin)) => Machine(true, candy - 1, coin) // dispense a candy
+    }
+
+  // returns: n. of remaining candies, n.of coins + the current state of the machine
+  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = {
+    def helper( inputs: List[Input]) (s : Machine) : ((Int, Int), Machine) = {
+      inputs match {
+        case h::t => helper(t)( update(h)(s) )
+        case Nil => ( (s.candies, s.coins), s )
+      }
+    }
+
+    State[Machine, (Int,Int)]( s => {
+      inputs match {
+        case h::t => helper(inputs)(s)
+        case Nil => ( (s.candies, s.coins) , s)
+      }
+    })
+  }
 }
+
+
+// to test in REPL:
+
+//import advpro5.RNG.Simple
+//import advpro5._
+
+//val test1 = RNG.nonNegativeInt(Simple(42))
+//
+//val test2 = RNG.double(Simple(42))
+//
+//val test3 = RNG.double3(Simple(42))
+//
+//val test4 = RNG.ints(5)(Simple(42))
+//
+//val testints2 = RNG.ints2(5)(Simple(42))
+//
+//val test5 = RNG._double(Simple(42))
+//
+//val test6 = RNG.randIntDouble(Simple(42))
+//
+//val test7 = RNG._ints(5)(Simple(42))
+//
+//val test8 = RNG.nonNegativeLessThan(10)(Simple(42))
+//
+//val test9 = RNG._map2(RNG.unit(1), RNG.unit(2) )( (a,b) => a+b) (Simple(42))
+//
+//val test10 = State.sequence( List(State.random_int, State.random_int, State.random_int) ).run(Simple(42))
+//
+//val test11 = State.state2stream( State.random_int )( RNG.Simple(42)).take(5).toList
+//
+//val random_integers = State.state2stream( State.random_int )(RNG.Simple(42)).take(10).toList
+//
+//val test13 = Candy.simulateMachine(List( Coin, Turn, Coin, Turn, Turn, Coin, Turn)).run(Machine(true, 10, 0))
