@@ -30,6 +30,6 @@ val test11 = State.state2stream( State.random_int )( RNG.Simple(42)).take(5).toL
 
 val random_integers = State.state2stream( State.random_int )(RNG.Simple(42)).take(10).toList
 
-
+val test13 = Candy.simulateMachine(List( Coin, Turn, Coin, Turn, Turn, Coin, Turn)).run(Machine(true, 10, 0))
 
 
