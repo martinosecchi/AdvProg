@@ -41,6 +41,17 @@ class StreamSpecMsec extends FlatSpec with Checkers {
     for { la <- arbitrary[List[A]] suchThat (_.nonEmpty)}
     yield list2stream (la)
 
+  def len[A](s: Stream[A]) :Int = s.foldRight(0)((_,s) => s+1)
+
+  def compareStreams[A](s1: Stream[A], s2: Stream[A]) : Boolean = {
+    val a = s1.toList
+    val b = s2.toList
+    a.equals(b)
+  }
+
+  val ints = arbitrary[Int] suchThat (_ > 0)
+  val streams = genNonEmptyStream[Int]
+
   // a property test:
 
   it should "return the head of the stream packaged in Some (02)" in check {
@@ -62,14 +73,27 @@ class StreamSpecMsec extends FlatSpec with Checkers {
 
 //  - take should not force any heads nor any tails of the Stream it
 //  manipulates
+
+  it should "not force heads nor tails (11)" in {
+    Stream(1,2,3).map(_/0).take(2)
+  }
+
+  //  - s.take(n).take(n) == s.take(n) for any Stream s and any n
+  //    (idempotency)
+  it should "respect idempotency (12)" in check {
+    Prop.forAll (ints, genNonEmptyStream[Int]) { (n, s) =>  compareStreams(s.take(n).take(n), s.take(n)) }
+  }
+
 //  - take(n) does not force (n+1)st head ever (even if we force all
 //  elements of take(n))
-//  - s.take(n).take(n) == s.take(n) for any Stream s and any n
-//    (idempotency)
-
-  it should "not force heads nor tails of the stream (11)" in {
-//    val str = list2stream( List.fill(10)(throw new scala.Exception()) )
-//    str.take(10)
+  it should "not force n+1 st head (13)" in {
+    cons(1, cons(1, cons( throw new scala.Exception(), empty))).take(2)
   }
+
+  //other tests ?
+
+
+
+
 
 }
