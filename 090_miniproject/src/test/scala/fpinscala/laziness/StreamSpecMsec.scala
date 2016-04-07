@@ -43,7 +43,7 @@ class StreamSpecMsec extends FlatSpec with Checkers {
 
   def len[A](s: Stream[A]) :Int = s.foldRight(0)((_,s) => s+1)
 
-  def compareStreams[A](s1: Stream[A], s2: Stream[A]) : Boolean = {
+  def forceCompareStreams[A](s1: Stream[A], s2: Stream[A]) : Boolean = {
     val a = s1.toList
     val b = s2.toList
     a.equals(b)
@@ -51,6 +51,8 @@ class StreamSpecMsec extends FlatSpec with Checkers {
 
   val ints = arbitrary[Int] suchThat (_ > 0)
   val streams = genNonEmptyStream[Int]
+  val exceptionStream6 = cons(throw new scala.Exception(), cons(throw new scala.Exception(), cons(throw new scala.Exception(),
+    cons(throw new scala.Exception(), cons(throw new scala.Exception(), cons(throw new scala.Exception(), empty))))))
 
   // a property test:
 
@@ -81,7 +83,7 @@ class StreamSpecMsec extends FlatSpec with Checkers {
   //  - s.take(n).take(n) == s.take(n) for any Stream s and any n
   //    (idempotency)
   it should "respect idempotency (12)" in check {
-    Prop.forAll (ints, genNonEmptyStream[Int]) { (n, s) =>  compareStreams(s.take(n).take(n), s.take(n)) }
+    Prop.forAll (ints, genNonEmptyStream[Int]) { (n, s) =>  forceCompareStreams(s.take(n).take(n), s.take(n)) }
   }
 
 //  - take(n) does not force (n+1)st head ever (even if we force all
@@ -92,8 +94,20 @@ class StreamSpecMsec extends FlatSpec with Checkers {
 
   //other tests ?
 
+  behavior of "drop"
 
-
+//  - s.drop(n).drop(m) == s.drop(n+m) for any n, m (additivity)
+  it should "respect additivity (21)" in check {
+    Prop.forAll(Gen.choose[Int](1, 10), Gen.choose[Int](1,10), genNonEmptyStream){(n,m,s) =>
+      forceCompareStreams(s.drop(n).drop(m), s.drop(n+m))  //the tails are forced
+    }
+  }
+//  - s.drop(n) does not force any of the dropped elements heads
+  it should "not force dropped elements (22)" in {
+    val test = cons(throw new scala.Exception(), cons( throw new scala.Exception(), cons(1, cons(2, cons(3, empty)))))
+    assert(test.drop(2).toList.equals(List(1,2,3))) //toList forces the tail
+  }
+//    - the above should hold even if we force some stuff in the tail
 
 
 }
