@@ -18,8 +18,8 @@ import Arbitrary.arbitrary
 // fail on them :)
 
 import stream00._    // uncomment to test the book solution
-// import stream01._ // uncomment to test the broken headOption implementation
-// import stream02._ // uncomment to test another version that breaks headOption
+//import stream01._ // uncomment to test the broken headOption implementation
+// import stream02._ // our version
 
 class StreamSpecMsec extends FlatSpec with Checkers {
 
@@ -92,8 +92,6 @@ class StreamSpecMsec extends FlatSpec with Checkers {
     cons(1, cons(1, cons( throw new scala.Exception(), empty))).take(2)
   }
 
-  //other tests ?
-
   behavior of "drop"
 
 //  - s.drop(n).drop(m) == s.drop(n+m) for any n, m (additivity)
@@ -108,6 +106,31 @@ class StreamSpecMsec extends FlatSpec with Checkers {
     assert(test.drop(2).toList.equals(List(1,2,3))) //toList forces the tail
   }
 //    - the above should hold even if we force some stuff in the tail
+
+  behavior of "map"
+
+//  - x.map(id) == x (where id is the identity function)
+
+//  - map terminates on infinite streams
+
+  behavior of "append"
+
+  //just to see how it works, we can remove that eventually
+  it should "append" in {
+    val s = cons(1,cons(2,empty))
+    val ss = Stream(3,4)
+    val ls = s.append(ss).toList
+    //println(ls)
+    assert(ls.equals(List(1,2,3,4)))
+  }
+
+  //some examples for append:
+
+  // appending an empty stream should result in the starting stream s.append(Stream())==s
+
+  // appending on a infinite stream should terminate ?
+
+  //
 
 
 }
