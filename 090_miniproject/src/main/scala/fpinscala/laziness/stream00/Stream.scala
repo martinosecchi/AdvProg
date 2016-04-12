@@ -107,6 +107,12 @@ trait Stream[+A] {
   def append[B>:A](s: => Stream[B]): Stream[B] =
     foldRight(s)((h,t) => cons(h,t))
 
+  // Idea for fixing append -- doesn't work
+ // def append2[B>:A](s: Stream[B]): Stream[B] = this match {
+ //   case Cons(h,t) => Cons(h, t.append2(s))
+ //   case _         => s
+ // }
+
   def flatMap[B](f: A => Stream[B]): Stream[B] =
     foldRight(empty[B])((h,t) => f(h) append t)
 

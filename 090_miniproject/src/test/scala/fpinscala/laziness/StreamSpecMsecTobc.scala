@@ -2,6 +2,7 @@
 // Andrzej Wasowski, IT University of Copenhagen
 
 // Martino Secchi
+// Tobias Christiani
 
 package fpinscala.laziness
 import scala.language.higherKinds
@@ -18,7 +19,7 @@ import Arbitrary.arbitrary
 // fail on them :)
 
 import stream00._    // uncomment to test the book solution
-//import stream01._ // uncomment to test the broken headOption implementation
+// import stream01._ // uncomment to test the broken headOption implementation
 // import stream02._ // our version
 
 class StreamSpecMsec extends FlatSpec with Checkers {
@@ -26,7 +27,8 @@ class StreamSpecMsec extends FlatSpec with Checkers {
   import Stream._
 
   // An example generator of random finite non-empty streams
-  def list2stream[A] (la :List[A]): Stream[A] = la.foldRight (empty[A]) (cons[A](_,_))
+  def list2stream[A] (la :List[A]): Stream[A]
+	= la.foldRight (empty[A]) (cons[A](_,_))
 
   // In ScalaTest we use the check method to switch to ScalaCheck's internal DSL
   def genNonEmptyStream[A] (implicit arbA :Arbitrary[A]) :Gen[Stream[A]] =
@@ -47,6 +49,9 @@ class StreamSpecMsec extends FlatSpec with Checkers {
     cons(throw new scala.Exception(), cons(throw new scala.Exception(),
       cons(throw new scala.Exception(), cons(throw new scala.Exception(),
         cons(throw new scala.Exception(), empty))))))
+	
+	val ones: Stream[Int] = cons(1, ones)
+	val seq: Stream[Int] = cons(1, seq.map(x => x + 1)) 
 
   behavior of "headOption"
 
@@ -75,37 +80,37 @@ class StreamSpecMsec extends FlatSpec with Checkers {
 
   behavior of "take"
 
-//  - take should not force any heads nor any tails of the Stream it
-//  manipulates
+// take should not force any heads nor any tails of the Stream it manipulates
 
   it should "not force heads nor tails (11)" in {
     Stream(1,2,3).map(_/0).take(2)
   }
 
-  //  - s.take(n).take(n) == s.take(n) for any Stream s and any n
-  //    (idempotency)
-  it should "respect idempotency (12)" in check {
+//  take(n) does not force (n+1)st head ever (even if we force all
+//  elements of take(n))
+  it should "not force n+1 st head (12)" in {
+    cons(1, cons(1, cons( throw new scala.Exception(), empty))).take(2)
+  }
+
+  // s.take(n).take(n) == s.take(n) for any Stream s and any n (idempotency)
+  it should "respect idempotency (13)" in check {
     Prop.forAll (ints, genNonEmptyStream[Int]) { (n, s) =>
       forceCompareStreams(s.take(n).take(n), s.take(n)) }
   }
 
-//  - take(n) does not force (n+1)st head ever (even if we force all
-//  elements of take(n))
-  it should "not force n+1 st head (13)" in {
-    cons(1, cons(1, cons( throw new scala.Exception(), empty))).take(2)
-  }
-
   behavior of "drop"
 
-//  - s.drop(n).drop(m) == s.drop(n+m) for any n, m (additivity)
+// s.drop(n).drop(m) == s.drop(n+m) for any n, m (additivity)
   it should "respect additivity (21)" in check {
     Prop.forAll(Gen.choose[Int](1, 10),
       Gen.choose[Int](1,10),
       genNonEmptyStream){(n,m,s) =>
-      forceCompareStreams(s.drop(n).drop(m), s.drop(n+m))  //the tails are forced
+      forceCompareStreams(s.drop(n).drop(m), s.drop(n+m))  
+	  //the tails are forced
     }
   }
-//  - s.drop(n) does not force any of the dropped elements heads
+
+// s.drop(n) does not force any of the dropped elements heads
   it should "not force dropped elements (22)" in {
     val test = cons(throw new scala.Exception(),
         cons( throw new scala.Exception(),
@@ -117,13 +122,22 @@ class StreamSpecMsec extends FlatSpec with Checkers {
   behavior of "map"
 
 //  - x.map(id) == x (where id is the identity function)
+	it should "preserve identity (31)" in check {
+		Prop.forAll (ints, streams) {(n, s) =>
+		forceCompareStreams(s, s.map(x => x)) }
+	 }
 
-//  - map terminates on infinite streams
+//  map terminates on infinite streams
+	it should "terminate on infinite streams (32)" in {
+		//val ones: Stream[Int] = Stream.cons(1, ones)
+		val twos = ones.map(x => x + 1)
+		assert(twos.take(3).toList == List(2,2,2))
+    }
 
-  behavior of "append"
+	behavior of "append"
 
   //just to see how it works, we can remove that eventually
-  it should "append" in {
+  it should "append (40)" in {
     val s = cons(1,cons(2,empty))
     val ss = Stream(3,4)
     val ls = s.append(ss).toList
@@ -133,15 +147,25 @@ class StreamSpecMsec extends FlatSpec with Checkers {
 
   //some examples for append:
 
-  // appending an empty stream should result in the starting stream s.append(Stream())==s
+  // appending an empty stream should result in the starting stream 
+  // s.append(Stream())==s
+	it should "preserve identity when appending empty stream (41)" in check {
+		Prop.forAll (streams) {s =>
+		forceCompareStreams(s, s.append(empty)) }
+	 }
 
-  // appending on a infinite stream should terminate ?
-  // (e.g. Stream.constant(1) is an infinite stream ore Stream.from(0))
 
-  // should not force the streams
-  it should "not force the streams" in check {
-    Prop.forAll(streams){ s => {
-       cons(1,exceptionStream6).append(s)  // doesn't pass
+  it should "terminate when appending infinite streams (42)" in {
+	assert(seq.append(seq).take(5).toList == List(1,2,3,4,5))
+  }
+  
+//   it should "not force the streams (43)" in {
+//	 Stream(1,2,3).map(_/0).append2(Stream(4,5,6).map(_/0))
+//   }
+  
+  it should "not force the streams (44)" in check {
+	  Prop.forAll(streams){ s => {
+      cons(1,exceptionStream6).append(s)  // pass
       s.append(exceptionStream6)    // passes
       true
     } }
